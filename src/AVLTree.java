@@ -54,7 +54,36 @@ public class AVLTree {
      * Returns -1 if an item with key k already exists in the tree.
      */
     public int insert(int k, String i) {
-        return 0;
+        if (search(k) != null){
+            return -1;
+        }
+        else {
+            IAVLNode newNodeParent = getPosition(k);
+            IAVLNode newNode = new AVLNode(k, i,newNodeParent);
+//            AVLNode newNode = new AVLNode(key = k, value = i, parent = newNodeParent);
+
+            if (empty()){
+                root = newNode;
+                max = newNode;
+                min = newNode;
+                return 0;
+            }
+            else {
+                if (newNodeParent.getKey() > k){
+                    newNodeParent.setLeft(newNode);
+                    if (newNodeParent.getKey() == min.getKey()){
+                        min = newNode;
+                    }
+                }
+                else {
+                    newNodeParent.setRight(newNode);
+                    if (newNodeParent.getKey() == max.getKey()){
+                        max = newNode;
+                    }
+                }
+            }
+            return insertRebalance(newNodeParent);
+        }
     }
 
     /**
@@ -68,7 +97,49 @@ public class AVLTree {
      */
     public int delete(int k)
     {
-        return 421;	// to be replaced by student code
+        if (search(k) == null){   //item with key k not found in the tree
+            return -1;
+        }
+        else {//item with key k found in the tree
+            IAVLNode node = getPosition(k);
+
+            if (node.getKey() == min.getKey()){
+                this.min = node.getSuccessor();
+            }
+
+            if (node.getKey() == max.getKey()){
+                if (node.getLeft().isRealNode()){            //node have left child
+                    IAVLNode max_subtree = node.getLeft();
+                    while (max_subtree.getRight().isRealNode()){
+                        max_subtree = max_subtree.getRight();
+                    }
+                    this.max = max_subtree;
+                }
+                else{                   //node is leaf
+                    this.max = node.getParent();
+                }
+            }
+
+            if (!node.getRight().isRealNode() && !node.getLeft().isRealNode()){  //node is leaf -> replace with external leaf
+                replaceNodeWithAnotherNode(node, ExLeaf);
+            }
+            else if (!node.getRight().isRealNode()){             //has only left child -> replace with left child
+                replaceNodeWithAnotherNode(node, node.getLeft());
+            }
+            else if (!node.getLeft().isRealNode()){            //has only right child -> replace with right child
+                replaceNodeWithAnotherNode(node, node.getRight());
+            }
+            else{             //has two children -> replace with successor
+                IAVLNode nodeSuccessor = node.getSuccessor();
+                //the successor is a leaf or unary node with only right child
+                replaceNodeWithAnotherNode(nodeSuccessor, nodeSuccessor.getRight());//remove the successor from the tree
+                //replace the node with the successor
+//                node.Key = nodeSuccessor.getKey();
+//                node.value = nodeSuccessor.value;
+                node = nodeSuccessor.getRight();
+            }
+            return deleteRebalance(node.getParent());    //
+        }
     }
 
     /**
@@ -175,7 +246,38 @@ public class AVLTree {
      */
     public AVLTree[] split(int x)
     {
-        return null;
+        IAVLNode node = getPosition(x);
+        AVLTree tSmaller = new AVLTree();
+        tSmaller.root = node.getLeft();
+        AVLTree tBigger = new AVLTree();
+        tBigger.root = node.getRight();
+        AVLTree[] newTrees = new AVLTree[] {tSmaller, tBigger};
+
+        while(node.getParent() != null){
+            if (node.getParent().getLeft() == node){
+                if (node.getParent().getRight().isRealNode()){
+                    AVLTree subTreeBigger = new AVLTree();
+                    subTreeBigger.root = node.getParent().getRight();
+                    tBigger.join(node.getParent(), subTreeBigger);
+                }
+                else {
+                    tBigger.insert(node.getParent().getKey(), node.getParent().getValue());
+                }
+            }
+            else{
+                if (node.getParent().getLeft().isRealNode()){
+                    AVLTree subTreeSmaller = new AVLTree();
+                    subTreeSmaller.root = node.getParent().getLeft();
+                    tSmaller.join(node.getParent(), subTreeSmaller);
+                }
+                else{
+                    tSmaller.insert(node.getParent().getKey(), node.getParent().getValue());
+                }
+            }
+            node = node.getParent();
+        }
+
+        return newTrees;
     }
 
     /**
@@ -187,11 +289,325 @@ public class AVLTree {
      * precondition: keys(t) < x < keys() or keys(t) > x > keys(). t/tree might be empty (rank = -1).
      * postcondition: none
      */
-    public int join(IAVLNode x, AVLTree t)
-    {
-        return -1;
+    public int join(IAVLNode x, AVLTree t) {
+        int rank_T1 = this.root.getHeight();
+        int rank_T2 = t.root.getHeight();
+
+        if (rank_T1 <= rank_T2){
+            if (this.root.getKey() < x.getKey()){   // keys(this) < x.key < keys(t)
+                IAVLNode mergeNode = findLeftNode(t, rank_T1);
+                //update x
+                x.setRight(mergeNode);
+                x.setLeft(this.root);
+                x.setParent(mergeNode.getParent());
+                //update nodes
+                mergeNode.getParent().setLeft(x);
+                this.root.setParent(x);
+                mergeNode.setParent(x);
+                //change max
+                this.max = t.max;
+            }
+            else{         // keys(this) > x.key > keys(t)
+                IAVLNode mergeNode = findRightNode(t, rank_T1);
+                //update x
+                x.setRight(this.root);
+                x.setLeft(mergeNode);
+                x.setParent(mergeNode.getParent());
+                //update nodes
+                mergeNode.getParent().setRight(x);
+                this.root.setParent(x);
+                mergeNode.setParent(x);
+                //update min
+                this.min = t.min;
+            }
+        }
+
+        else{//rank_T1 > rank_T2
+            if (this.root.getKey() < x.getKey()){// keys(this) < x.key < keys(t)
+                IAVLNode mergeNode = findRightNode(this, rank_T2);
+                //update x
+                x.setRight(t.root);
+                x.setLeft(mergeNode);
+                x.setParent(mergeNode.getParent());
+                //update nodes
+                mergeNode.getParent().setRight(x);
+                t.root.setParent(x);
+                mergeNode.setParent(x);
+                //update max
+                this.max = t.max;
+            }
+            else{// keys(this) > x.key > keys(t)
+                IAVLNode mergeNode = findLeftNode(t, rank_T2);
+                //update x
+                x.setRight(mergeNode);
+                x.setLeft(t.root);
+                x.setParent(mergeNode.getParent());
+                //update nodes
+                mergeNode.getParent().setLeft(x);
+                t.root.setParent(x);
+                mergeNode.setParent(x);
+                //update min
+                this.min = t.min;
+            }
+        }
+        insertRebalance(x);
+        this.root = x;
+        return Math.abs(rank_T1 - rank_T2) + 1;
+    }
+    // ######################################################################
+    // Auxiliary functions for the Tree:
+
+    private IAVLNode getPosition(int k){
+        IAVLNode node = root;
+        while (node.isRealNode()){
+            if (node.getKey() == k){
+                return node;
+            }
+            else if (node.getKey() > k){
+                node = node.getLeft();
+            }
+            else {
+                node = node.getRight();
+            }
+        }
+        return node;
     }
 
+    private int rotateRight(IAVLNode node){
+        IAVLNode left = node.getLeft();
+        IAVLNode left_right = node.getLeft().getRight();
+
+        if (node.getParent() == null){
+            this.root = left;
+        }
+        else if (node.getParent().getKey() > node.getKey()){
+            node.getParent().setLeft(left);
+        }
+        else {
+            node.getParent().setRight(left);
+        }
+
+        //update parents
+        left.setParent(node.getParent());
+        left_right.setParent(node);
+        node.setParent(left);
+
+        //update children
+        node.setLeft(left_right);
+        left.setRight(node);
+
+        //update size
+        return updateSize(left_right) + updateSize(node) + updateSize(left);
+    }
+
+
+    // _______________________________________________
+    private int rotateLeft(IAVLNode node){
+        IAVLNode right = node.getRight();
+        IAVLNode right_left = node.getRight().getLeft();
+
+        if (node.getParent() == null){
+            this.root = right;
+        }
+        else if (node.getParent().getKey() > node.getKey()){
+            node.getParent().setLeft(right);
+        }
+        else {
+            node.getParent().setRight(right);
+        }
+
+        //update parents
+        right.setParent(node.getParent());
+        right_left.setParent(node);
+        node.setParent(right);
+
+        //update children
+        node.setRight(right_left);
+        right.setLeft(node);
+
+        //update size
+        return updateSize(right_left) + updateSize(node) + updateSize(right);
+    }
+
+    //________________________________________________
+    private int insertRebalance(IAVLNode node){
+        int counter = 0;
+        while( node != null ){
+            int diffRight = node.getHeight() - node.getRight().getHeight();
+            int diffLeft = node.getHeight() - node.getLeft().getHeight();
+
+            int childRight_diffRight = node.getRight().getHeight() - node.getRight().getRight().getHeight();
+            int childRight_diffLeft = node.getRight().getHeight() - node.getRight().getLeft().getHeight();
+
+            int childLeft_diffChildRight = node.getLeft().getHeight() - node.getLeft().getRight().getHeight();
+            int childLeft_diffChildLeft = node.getLeft().getHeight() - node.getLeft().getLeft().getHeight();
+
+            if ((diffLeft == 0 && diffRight == 1) || (diffRight == 0 && diffLeft ==1)){//0,1 or 1,0
+                node.setHeight(node.getHeight()+1);   //promote
+                counter++;
+            }
+            else if (diffLeft == 0 && diffRight == 2 && childLeft_diffChildLeft == 1 && childLeft_diffChildRight == 2){//single rotation right
+                counter += rotateRight(node);
+                node.setHeight(node.getHeight() - 1);   //demote
+                counter += 2;
+            }
+            else if (diffLeft == 2 && diffRight == 0 && childRight_diffLeft == 2 && childRight_diffRight == 1){//single rotation left
+                counter += rotateLeft(node);
+                node.setHeight(node.getHeight() -1);    //demote
+                counter += 2;
+            }
+            else if(diffLeft == 0 && diffRight == 2 && childLeft_diffChildLeft == 2 && childLeft_diffChildRight == 1){//double rotation LR
+                node.setHeight(node.getHeight() -1);    //demote
+                node.getLeft().setHeight(node.getLeft().getHeight() - 1);   //demote
+                node.getLeft().getRight().setHeight(node.getLeft().getRight().getHeight() + 1);//promote
+                counter += rotateLeft(node.getLeft());
+                counter += rotateRight(node);
+                counter += 5;
+            }
+            else if(diffLeft == 2 && diffRight == 0 && childRight_diffLeft == 1 && childRight_diffRight == 2){//double rotation RL
+                node.setHeight(node.getHeight() - 1);  //demote
+                node.getRight().setHeight(node.getRight().getHeight() -1);//demote
+                node.getRight().getLeft().setHeight(node.getRight().getLeft().getHeight() + 1 );      //promote
+                counter += rotateRight(node.getRight());
+                counter += rotateLeft(node);
+                counter += 5;
+            }
+            else if(diffLeft == 0 && diffRight == 2 && childLeft_diffChildLeft == 1 && childLeft_diffChildRight == 1){
+                node.getLeft().setHeight(node.getLeft().getHeight() + 1);
+                counter += rotateRight(node);
+                counter += 2;
+            }
+            else if(diffLeft == 2 && diffRight == 0 && childRight_diffLeft == 1 && childRight_diffRight == 1){
+                node.getRight().setHeight(node.getRight().getHeight() + 1);
+                counter += rotateLeft(node);
+                counter += 2;
+            }
+
+            counter += updateSize(node);   //update size
+            node = node.getParent();      //continue up
+        }
+        return counter;
+    }
+
+    //_________________________________________________
+    private int deleteRebalance(IAVLNode node){
+        int counter = 0;
+        while (node != null){
+            int diffRight = node.getHeight() - node.getRight().getHeight();
+            int diffLeft = node.getHeight() - node.getLeft().getHeight();
+
+            int childRight_diffRight = node.getRight().getHeight() - node.getRight().getRight().getHeight();
+            int childRight_diffLeft = node.getRight().getHeight() - node.getRight().getLeft().getHeight();
+
+            int childLeft_diffChildRight = node.getLeft().getHeight() - node.getLeft().getRight().getHeight();
+            int childLeft_diffChildLeft = node.getLeft().getHeight() - node.getLeft().getLeft().getHeight();
+
+            if ((diffLeft == 1 && diffRight == 2) || (diffLeft == 2 && diffRight == 1)){
+                node.setHeight(node.getHeight() - 1);    //demote
+                counter++;
+            }
+            else if (diffLeft == 3 && diffRight == 1 && childRight_diffLeft == 1 && childRight_diffRight == 1){
+                node.setHeight(node.getHeight() - 1);     //demote
+                node.getRight().setHeight(node.getRight().getHeight() + 1);   //promote
+                counter += rotateLeft(node);
+                counter += 3;
+            }
+            else if (diffLeft == 1 && diffRight == 3 && childLeft_diffChildLeft == 1 && childLeft_diffChildRight == 1){
+                node.setHeight(node.getHeight() - 1);       //demote
+                node.getLeft().setHeight(node.getLeft().getHeight() + 1); //promote
+                counter += rotateRight(node);
+                counter += 3;
+            }
+            else if (diffLeft == 3 && diffRight == 1 && childRight_diffLeft == 2 && childRight_diffRight == 1){
+                node.setHeight(node.getHeight() - 2);     //demote twice
+                counter += rotateLeft(node);
+                counter += 2;
+            }
+            else if (diffLeft == 1 && diffRight == 3 && childLeft_diffChildLeft == 1 && childLeft_diffChildRight == 2){
+                node.setHeight(node.getHeight() - 2); //demote twice
+                counter += rotateRight(node);
+                counter += 2;
+            }
+            else if (diffLeft == 3 && diffRight == 1 && childRight_diffLeft == 1 && childRight_diffRight == 2){
+                node.setHeight(node.getHeight() - 2);   //demote twice
+                node.getRight().setHeight(node.getRight().getHeight() - 1);   //demote
+                node.getRight().getLeft().setHeight(node.getRight().getLeft().getHeight() + 1);      //promote
+                counter += rotateRight(node.getRight());
+                counter += rotateLeft(node);
+                counter += 5;
+            }
+            else if (diffLeft == 1 && diffRight == 3 && childLeft_diffChildLeft == 2 && childLeft_diffChildRight == 1){
+                node.setHeight(node.getHeight() - 2);   //demote twice
+                node.getLeft().setHeight(node.getLeft().getHeight() - 1);    //demote
+                node.getLeft().getRight().setHeight(node.getLeft().getRight().getHeight() + 1);    //promote
+                counter += rotateLeft(node.getLeft());
+                counter += rotateRight(node);
+                counter += 5;
+            }
+            counter += updateSize(node);   //update size
+            node = node.getParent();      //continue up
+        }
+        return counter;
+    }
+    // _______________________________________________
+    private void replaceNodeWithAnotherNode(IAVLNode node, IAVLNode anotherNode){
+        if (this.root == node){
+            this.root = anotherNode;
+        }
+        else{
+            if (node.getParent().getLeft() == node){
+                node.getParent().setLeft(anotherNode);
+            }
+            else {
+                node.getParent().setRight(anotherNode);
+            }
+        }
+        anotherNode.setParent(node.getParent());
+    }
+
+
+    // _______________________________________________
+    private int updateSize(IAVLNode node){
+        node.setSize(node.getLeft().getSize() + node.getRight().getSize() + 1);
+        if (!node.getRight().isRealNode() && !node.getLeft().isRealNode() && node.getHeight()!=0){ //is an internal leaf
+            node.setHeight(0);
+            return 1;
+        }
+        return 0;
+    }
+
+    // ________________________________________________
+    private IAVLNode findRightNode (AVLTree t, int k){
+        IAVLNode node = t.root;
+        while (node.getHeight() > k){
+            if (node.getRight().isRealNode()){
+                node = node.getRight();
+            }
+            else{
+                node = node.getLeft();
+            }
+
+        }
+        return node;
+    }
+
+
+    //_________________________________________________
+    private IAVLNode findLeftNode (AVLTree t, int k){
+        IAVLNode node = t.root;
+        while (node.getHeight() > k){
+            if (node.getLeft().isRealNode()){
+                node = node.getLeft();
+            }
+            else{
+                node = node.getRight();
+            }
+
+        }
+        return node;
+    }
+
+    // ###########################################################################
     /**
      * public interface IAVLNode
      * ! Do not delete or modify this - otherwise all tests will fail !
@@ -208,7 +624,9 @@ public class AVLTree {
         public boolean isRealNode(); // Returns True if this is a non-virtual AVL node.
         public void setHeight(int height); // Sets the height of the node.
         public int getHeight(); // Returns the height of the node (-1 for virtual nodes).
+        public void setSize(int size);
         public int getSize(); //return the size of this tree.
+        public IAVLNode getSuccessor(); // get the successor of the current node.
     }
 
     /**
@@ -231,7 +649,7 @@ public class AVLTree {
         private IAVLNode right = null;
         private IAVLNode parent = null;
 
-        public AVLNode(int key,String value){
+        public AVLNode(int key,String value, IAVLNode parent){
             this.key = key;
             this.info = value;
             this.left = ExLeaf;  //key = -1 , info = null, height = -1, size = 0;
@@ -285,12 +703,30 @@ public class AVLTree {
         {
             return this.height; // to be replaced by student code
         }
+        public void setSize(int size) {this.size = size;}
         public int getSize() {return 1 + this.getRight().getSize() + getLeft().getSize();}
+
+        public IAVLNode getSuccessor(){
+            IAVLNode node;
+            if (this.right.isRealNode()){    //has right child
+                node = this.right;
+                while (node.getLeft().isRealNode()){
+                    node = node.getLeft();
+                }
+            }
+            else{
+                node = this.parent;
+                while (node.getParent() != null && node == node.getParent().getRight()){
+                    node = node.getParent();
+                }
+            }
+            return node;
+        }
     }
 
     public class CreateExternalLeaf extends AVLNode{
         CreateExternalLeaf() {
-            super(-1, null);
+            super(-1, null, null);
             this.height = -1;
             this.size = 0;
         }
