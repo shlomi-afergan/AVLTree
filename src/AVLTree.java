@@ -8,7 +8,14 @@
  */
 
 public class AVLTree {
-// check this
+
+    public IAVLNode root = null;
+    public IAVLNode ExLeaf = new CreateExternalLeaf();
+    private IAVLNode min;
+    private IAVLNode max;
+
+
+
     /**
      * public boolean empty()
      *
@@ -16,7 +23,7 @@ public class AVLTree {
      *
      */
     public boolean empty() {
-        return false; // to be replaced by student code
+        return !root.isRealNode(); // to be replaced by student code
     }
 
     /**
@@ -27,8 +34,15 @@ public class AVLTree {
      */
     public String search(int k)
     {
-        return "searchDefaultString";  // to be replaced by student code
+        IAVLNode node = root;
+        while (node.getKey() != -1) {     // until we reach an external node // while(node.isRealNode())
+            if (k == node.getKey()) return node.getValue();   //we found k
+            else if (k < node.getKey()) node = node.getLeft();   //continue search in left tree.
+            else node = node.getRight();
+        }
+        return null;  // k not found
     }
+
 
     /**
      * public int insert(int k, String i)
@@ -40,7 +54,7 @@ public class AVLTree {
      * Returns -1 if an item with key k already exists in the tree.
      */
     public int insert(int k, String i) {
-        return 420;	// to be replaced by student code
+        return 0;
     }
 
     /**
@@ -65,7 +79,8 @@ public class AVLTree {
      */
     public String min()
     {
-        return "minDefaultString"; // to be replaced by student code
+        if (this.empty()) return null;
+        else return min.getValue();
     }
 
     /**
@@ -76,7 +91,8 @@ public class AVLTree {
      */
     public String max()
     {
-        return "maxDefaultString"; // to be replaced by student code
+        if (this.empty()) return null;
+        else return max.getValue();
     }
 
     /**
@@ -85,9 +101,21 @@ public class AVLTree {
      * Returns a sorted array which contains all keys in the tree,
      * or an empty array if the tree is empty.
      */
-    public int[] keysToArray()
-    {
-        return new int[33]; // to be replaced by student code
+    public int[] keysToArray(){
+        IAVLNode node = root;
+        int[] array = new int[node.getSize()];
+            if (!node.isRealNode()) return array;  //size should be 0 because the tree is empty.
+            else keysToArray_rec(node, array, 0);
+            return array;
+}
+
+    private void keysToArray_rec(IAVLNode node, int[] array, int index) {
+        if (node.isRealNode()) {
+            keysToArray_rec(node.getLeft(), array, index);
+            array[index] = node.getKey();
+            index += 1;
+            keysToArray_rec(node.getRight(), array, index);
+        }
     }
 
     /**
@@ -99,7 +127,20 @@ public class AVLTree {
      */
     public String[] infoToArray()
     {
-        return new String[55]; // to be replaced by student code
+        IAVLNode node = root;
+        String[] array = new String[node.getSize()];
+        if (!node.isRealNode()) return array;  //size should be 0 because the tree is empty.
+        else infoToArray_rec(node, array, 0);
+        return array;
+    }
+
+    private void infoToArray_rec(IAVLNode node, String[] array, int index) {
+        if (node.isRealNode()) {
+            infoToArray_rec(node.getLeft(), array, index);
+            array[index] = node.getValue();
+            index += 1;
+            infoToArray_rec(node.getRight(), array, index);
+        }
     }
 
     /**
@@ -109,7 +150,7 @@ public class AVLTree {
      */
     public int size()
     {
-        return 422; // to be replaced by student code
+        return root.getSize();
     }
 
     /**
@@ -119,7 +160,8 @@ public class AVLTree {
      */
     public IAVLNode getRoot()
     {
-        return null;
+        if (root.isRealNode()) return root;
+        else return null;
     }
 
     /**
@@ -166,6 +208,7 @@ public class AVLTree {
         public boolean isRealNode(); // Returns True if this is a non-virtual AVL node.
         public void setHeight(int height); // Sets the height of the node.
         public int getHeight(); // Returns the height of the node (-1 for virtual nodes).
+        public int getSize(); //return the size of this tree.
     }
 
     /**
@@ -176,50 +219,80 @@ public class AVLTree {
      *
      * This class can and MUST be modified (It must implement IAVLNode).
      */
-    public class AVLNode implements IAVLNode{
+
+
+    private class AVLNode implements IAVLNode{
+
+        int key;
+        int height = 0;
+        int size = 0;
+        String info;
+        private IAVLNode left = null;
+        private IAVLNode right = null;
+        private IAVLNode parent = null;
+
+        public AVLNode(int key,String value){
+            this.key = key;
+            this.info = value;
+            this.left = ExLeaf;  //key = -1 , info = null, height = -1, size = 0;
+            this.right = ExLeaf;
+        }
+
+
+
+
         public int getKey()
         {
-            return 423; // to be replaced by student code
+            return this.key; // to be replaced by student code
         }
         public String getValue()
         {
-            return "getValueDefault"; // to be replaced by student code
+            return this.info; // to be replaced by student code
         }
         public void setLeft(IAVLNode node)
         {
-            return; // to be replaced by student code
+            this.left = node; // to be replaced by student code
         }
         public IAVLNode getLeft()
         {
-            return null; // to be replaced by student code
+            return this.left; // to be replaced by student code
         }
         public void setRight(IAVLNode node)
         {
-            return; // to be replaced by student code
+            this.right = node; // to be replaced by student code
         }
         public IAVLNode getRight()
         {
-            return null; // to be replaced by student code
+            return this.right; // to be replaced by student code
         }
         public void setParent(IAVLNode node)
         {
-            return; // to be replaced by student code
+            this.parent = node; // to be replaced by student code
         }
         public IAVLNode getParent()
         {
-            return null; // to be replaced by student code
+            return this.parent; // to be replaced by student code
         }
         public boolean isRealNode()
         {
-            return true; // to be replaced by student code
+            return this.height != -1; // to be replaced by student code
         }
         public void setHeight(int height)
         {
-            return; // to be replaced by student code
+            this.height = height; // to be replaced by student code
         }
         public int getHeight()
         {
-            return 424; // to be replaced by student code
+            return this.height; // to be replaced by student code
+        }
+        public int getSize() {return 1 + this.getRight().getSize() + getLeft().getSize();}
+    }
+
+    public class CreateExternalLeaf extends AVLNode{
+        CreateExternalLeaf() {
+            super(-1, null);
+            this.height = -1;
+            this.size = 0;
         }
     }
 
