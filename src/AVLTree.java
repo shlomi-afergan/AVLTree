@@ -171,20 +171,21 @@ public class AVLTree {
      * Returns a sorted array which contains all keys in the tree,
      * or an empty array if the tree is empty.
      */
+    public static int idx_KeysToArray = -1;
     public int[] keysToArray(){
         IAVLNode node = root;
         int[] array = new int[node.getSize()];
             if (!node.isRealNode()) return array;  //size should be 0 because the tree is empty.
-            else keysToArray_rec(node, array, 0);
+            else keysToArray_rec(node, array);
             return array;
 }
 
-    private void keysToArray_rec(IAVLNode node, int[] array, int index) {
+    private void keysToArray_rec(IAVLNode node, int[] array) {
         if (node.isRealNode()) {
-            keysToArray_rec(node.getLeft(), array, index);
-            array[index] = node.getKey();
-            index += 1;
-            keysToArray_rec(node.getRight(), array, index);
+            keysToArray_rec(node.getLeft(), array);
+            idx_KeysToArray += 1;
+            array[idx_KeysToArray] = node.getKey();
+            keysToArray_rec(node.getRight(), array);
         }
     }
 
@@ -195,21 +196,22 @@ public class AVLTree {
      * sorted by their respective keys,
      * or an empty array if the tree is empty.
      */
+    public static int idx_infoToArray = -1;
     public String[] infoToArray()
     {
         IAVLNode node = root;
         String[] array = new String[node.getSize()];
         if (!node.isRealNode()) return array;  //size should be 0 because the tree is empty.
-        else infoToArray_rec(node, array, 0);
+        else infoToArray_rec(node, array);
         return array;
     }
 
-    private void infoToArray_rec(IAVLNode node, String[] array, int index) {
+    private void infoToArray_rec(IAVLNode node, String[] array) {
         if (node.isRealNode()) {
-            infoToArray_rec(node.getLeft(), array, index);
-            array[index] = node.getValue();
-            index += 1;
-            infoToArray_rec(node.getRight(), array, index);
+            infoToArray_rec(node.getLeft(), array);
+            idx_infoToArray += 1;
+            array[idx_infoToArray] = node.getValue();
+            infoToArray_rec(node.getRight(), array);
         }
     }
 
@@ -570,6 +572,7 @@ public class AVLTree {
 
     // _______________________________________________
     private int updateSize(IAVLNode node){
+        if (node == ExLeaf) return 0;
         node.setSize(node.getLeft().getSize() + node.getRight().getSize() + 1);
         if (!node.getRight().isRealNode() && !node.getLeft().isRealNode() && node.getHeight()!=0){ //is an internal leaf
             node.setHeight(0);
