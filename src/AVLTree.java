@@ -9,8 +9,8 @@
 
 public class AVLTree {
 
-    public IAVLNode root = null;
     public IAVLNode ExLeaf = new CreateExternalLeaf();
+    public IAVLNode root = ExLeaf;
     private IAVLNode min;
     private IAVLNode max;
 
@@ -35,7 +35,7 @@ public class AVLTree {
     public String search(int k)
     {
         IAVLNode node = root;
-        while (node.getKey() != -1) {     // until we reach an external node // while(node.isRealNode())
+        while (node.isRealNode()) {     // until we reach an external node // while(node.isRealNode())
             if (k == node.getKey()) return node.getValue();   //we found k
             else if (k < node.getKey()) node = node.getLeft();   //continue search in left tree.
             else node = node.getRight();
@@ -60,7 +60,6 @@ public class AVLTree {
         else {
             IAVLNode newNodeParent = getPosition(k);
             IAVLNode newNode = new AVLNode(k, i,newNodeParent);
-//            AVLNode newNode = new AVLNode(key = k, value = i, parent = newNodeParent);
 
             if (empty()){
                 root = newNode;
@@ -359,18 +358,19 @@ public class AVLTree {
 
     private IAVLNode getPosition(int k){
         IAVLNode node = root;
+        IAVLNode parent_node = node;
         while (node.isRealNode()){
-            if (node.getKey() == k){
-                return node;
-            }
-            else if (node.getKey() > k){
+            if (node.getKey() > k){
+                parent_node = node;
                 node = node.getLeft();
             }
             else {
+                parent_node = node;
                 node = node.getRight();
             }
         }
-        return node;
+        if (parent_node == ExLeaf) return null;
+        return parent_node;
     }
 
     private int rotateRight(IAVLNode node){
@@ -432,57 +432,59 @@ public class AVLTree {
     //________________________________________________
     private int insertRebalance(IAVLNode node){
         int counter = 0;
-        while( node != null ){
+        while(node != null ){
             int diffRight = node.getHeight() - node.getRight().getHeight();
             int diffLeft = node.getHeight() - node.getLeft().getHeight();
-
-            int childRight_diffRight = node.getRight().getHeight() - node.getRight().getRight().getHeight();
-            int childRight_diffLeft = node.getRight().getHeight() - node.getRight().getLeft().getHeight();
-
-            int childLeft_diffChildRight = node.getLeft().getHeight() - node.getLeft().getRight().getHeight();
-            int childLeft_diffChildLeft = node.getLeft().getHeight() - node.getLeft().getLeft().getHeight();
 
             if ((diffLeft == 0 && diffRight == 1) || (diffRight == 0 && diffLeft ==1)){//0,1 or 1,0
                 node.setHeight(node.getHeight()+1);   //promote
                 counter++;
             }
-            else if (diffLeft == 0 && diffRight == 2 && childLeft_diffChildLeft == 1 && childLeft_diffChildRight == 2){//single rotation right
-                counter += rotateRight(node);
-                node.setHeight(node.getHeight() - 1);   //demote
-                counter += 2;
-            }
-            else if (diffLeft == 2 && diffRight == 0 && childRight_diffLeft == 2 && childRight_diffRight == 1){//single rotation left
-                counter += rotateLeft(node);
-                node.setHeight(node.getHeight() -1);    //demote
-                counter += 2;
-            }
-            else if(diffLeft == 0 && diffRight == 2 && childLeft_diffChildLeft == 2 && childLeft_diffChildRight == 1){//double rotation LR
-                node.setHeight(node.getHeight() -1);    //demote
-                node.getLeft().setHeight(node.getLeft().getHeight() - 1);   //demote
-                node.getLeft().getRight().setHeight(node.getLeft().getRight().getHeight() + 1);//promote
-                counter += rotateLeft(node.getLeft());
-                counter += rotateRight(node);
-                counter += 5;
-            }
-            else if(diffLeft == 2 && diffRight == 0 && childRight_diffLeft == 1 && childRight_diffRight == 2){//double rotation RL
-                node.setHeight(node.getHeight() - 1);  //demote
-                node.getRight().setHeight(node.getRight().getHeight() -1);//demote
-                node.getRight().getLeft().setHeight(node.getRight().getLeft().getHeight() + 1 );      //promote
-                counter += rotateRight(node.getRight());
-                counter += rotateLeft(node);
-                counter += 5;
-            }
-            else if(diffLeft == 0 && diffRight == 2 && childLeft_diffChildLeft == 1 && childLeft_diffChildRight == 1){
-                node.getLeft().setHeight(node.getLeft().getHeight() + 1);
-                counter += rotateRight(node);
-                counter += 2;
-            }
-            else if(diffLeft == 2 && diffRight == 0 && childRight_diffLeft == 1 && childRight_diffRight == 1){
-                node.getRight().setHeight(node.getRight().getHeight() + 1);
-                counter += rotateLeft(node);
-                counter += 2;
-            }
+            else {
+                if (diffLeft == 0 && diffRight == 2) {
+                    int childLeft_diffChildRight = node.getLeft().getHeight() - node.getLeft().getRight().getHeight();
+                    int childLeft_diffChildLeft = node.getLeft().getHeight() - node.getLeft().getLeft().getHeight();
 
+                    if (childLeft_diffChildLeft == 1 && childLeft_diffChildRight == 2) {     //single rotation right
+                        counter += rotateRight(node);
+                        node.setHeight(node.getHeight() - 1);   //demote
+                        counter += 2;
+                    } else if (childLeft_diffChildLeft == 2 && childLeft_diffChildRight == 1) {//double rotation LR
+                        node.setHeight(node.getHeight() - 1);    //demote
+                        node.getLeft().setHeight(node.getLeft().getHeight() - 1);   //demote
+                        node.getLeft().getRight().setHeight(node.getLeft().getRight().getHeight() + 1);//promote
+                        counter += rotateLeft(node.getLeft());
+                        counter += rotateRight(node);
+                        counter += 5;
+                    } else if (childLeft_diffChildLeft == 1 && childLeft_diffChildRight == 1) {
+                        node.getLeft().setHeight(node.getLeft().getHeight() + 1);
+                        counter += rotateRight(node);
+                        counter += 2;
+                    }
+                } else if (diffLeft == 2 && diffRight == 0) {
+                    int childRight_diffRight = node.getRight().getHeight() - node.getRight().getRight().getHeight();
+                    int childRight_diffLeft = node.getRight().getHeight() - node.getRight().getLeft().getHeight();
+
+                    if (childRight_diffLeft == 2 && childRight_diffRight == 1) {    //single rotation left
+                        counter += rotateLeft(node);
+                        node.setHeight(node.getHeight() - 1);    //demote
+                        counter += 2;
+                    }
+                    else if (childRight_diffLeft == 1 && childRight_diffRight == 2) { //double rotation RL
+                        node.setHeight(node.getHeight() - 1);  //demote
+                        node.getRight().setHeight(node.getRight().getHeight() - 1);//demote
+                        node.getRight().getLeft().setHeight(node.getRight().getLeft().getHeight() + 1);      //promote
+                        counter += rotateRight(node.getRight());
+                        counter += rotateLeft(node);
+                        counter += 5;
+                    }
+                    else if(childRight_diffLeft == 1 && childRight_diffRight == 1){
+                        node.getRight().setHeight(node.getRight().getHeight() + 1);
+                        counter += rotateLeft(node);
+                        counter += 2;
+                    }
+                }
+            }
             counter += updateSize(node);   //update size
             node = node.getParent();      //continue up
         }
@@ -639,23 +641,23 @@ public class AVLTree {
      */
 
 
-    private class AVLNode implements IAVLNode{
+    public class AVLNode implements IAVLNode{
 
         int key;
         int height = 0;
-        int size = 0;
+        int size = 1;
         String info;
         private IAVLNode left = null;
         private IAVLNode right = null;
-        private IAVLNode parent = null;
+        private IAVLNode parent;
 
         public AVLNode(int key,String value, IAVLNode parent){
             this.key = key;
             this.info = value;
             this.left = ExLeaf;  //key = -1 , info = null, height = -1, size = 0;
             this.right = ExLeaf;
+            this.setParent(parent);
         }
-
 
 
 
@@ -704,7 +706,8 @@ public class AVLTree {
             return this.height; // to be replaced by student code
         }
         public void setSize(int size) {this.size = size;}
-        public int getSize() {return 1 + this.getRight().getSize() + getLeft().getSize();}
+//        public int getSize() {return 1 + this.getRight().getSize() + getLeft().getSize();}
+        public int getSize() {return this.size;}
 
         public IAVLNode getSuccessor(){
             IAVLNode node;
